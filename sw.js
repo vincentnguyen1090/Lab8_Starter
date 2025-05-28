@@ -9,7 +9,7 @@ self.addEventListener('install', function (event) {
     caches.open(CACHE_NAME).then(function (cache) {
       // B6. TODO - Add all of the URLs from RECIPE_URLs here so that they are
       //            added to the cache when the ServiceWorker is installed
-      return cache.addAll([]);
+      return cache.addAll(RECIPE_URLS);
     })
   );
 });
@@ -32,6 +32,27 @@ self.addEventListener('fetch', function (event) {
   //       fetch(event.request)
   // https://developer.chrome.com/docs/workbox/caching-strategies-overview/
   /*******************************/
+
+  event.respondWith( // intercept every network request and respond with cached or fetched version
+    // open cache using CACHE_NAME
+    caches.open(CACHE_NAME).then(function (cache) {
+      // check if cache is already stored, if found then cacheResponse withh be a response obj
+      return cache.match(event.request).then(function (cachedResponse) {
+        // check if cache already in request, return immediately
+        if(cachedResponse) {
+          return cachedResponse;
+        }
+        // if not, fetch from network
+        return fetch(event.request).then(function (networkResponse) {
+          // save clone of fetched response in the cache
+          cache.put(event.request, networkResponse.clone());
+          // return origninal response to browser
+          return networkResponse;
+        })
+      })
+    })
+  )
+
   // B7. TODO - Respond to the event by opening the cache using the name we gave
   //            above (CACHE_NAME)
   // B8. TODO - If the request is in the cache, return with the cached version.
